@@ -99,7 +99,7 @@ class Door(object):
 class Mood(Enum):
     DANCING = 1
     TALKING = 2
-    LEAVE = 0
+    LEAVING = 0
 
 class PartyState(Enum):
     ENTERING = 0
@@ -126,6 +126,8 @@ class Partygoer(object):
             self.mood = Mood(randint(1,2))
         self.state = PartyState.ENTERING
         self.fun = 25
+        self.ticker = 0
+        self.reached_target = True
 
     def generate_sprite(self):
         skin_color = gen_random_color()
@@ -191,13 +193,13 @@ class Partygoer(object):
         elif self.state == PartyState.DANCING:
             if self.mood == Mood.TALKING:
                 self.move_to_talk()
-            elif mood == Mood.LEAVING:
-                self.state = PartyState.MOVING_TO_LEAVE
+            elif self.mood == Mood.LEAVING:
+                self.move_to_leave()
         elif self.state == PartyState.TALKING:
-            if mood == Mood.DANCING:
+            if self.mood == Mood.DANCING:
                 self.move_to_dance()
-            elif mood == Mood.LEAVING:
-                self.state = PartyState.MOVING_TO_LEAVE
+            elif self.mood == Mood.LEAVING:
+                self.move_to_leave()
     
     def move_to_dance(self):
         # Pick random spot on dancefloor area
@@ -221,6 +223,7 @@ class Partygoer(object):
             x = randint(200, 400),
             y = randint(450, 480),
             speed = 2) 
+        self.state = PartyState.MOVING_TO_LEAVE        
 
     def fun_update(self):
         """
@@ -241,11 +244,13 @@ class Partygoer(object):
         """
         1 in 5 (?) chance that this partygoer wants to do something else
         """
-        if randint(0,4) == 0:
+        if randint(0, 10) == 0:
             if self.mood == Mood.DANCING:
-                self.mood == Mood.TALKING
+                self.mood = Mood.TALKING
             elif self.mood == Mood.TALKING:
-                self.mood == Mood.DANCING        
+                self.mood = Mood.DANCING
+        if self.fun <= 0:
+            self.mood = Mood.LEAVING
 
     def draw(self):
         self.parent_surface.blit(self.surface, (self.x, self.y))
@@ -260,9 +265,12 @@ class Partygoer(object):
         """
         Logic for this thing to do on evey clock step
         """
-        self.fun_update()
-        self.mood_update()
-        self.state_update() 
+        self.ticker += randint(1, 5)
+        if self.ticker >= 300:
+            self.ticker = 0
+            self.fun_update()
+            self.mood_update()
+            self.state_update() 
         self.move_towards_target()
     
     def destroy(self):
@@ -270,18 +278,19 @@ class Partygoer(object):
         object_dict[self.id] = None
     
     def move_towards_target(self):
-        if self.mt_x == self.x and self.mt_y == self.y:
-            self.reached_target = True
-        loc = pygame.math.Vector2(self.x, self.y)
-        target = pygame.math.Vector2(self.mt_x, self.mt_y)
-        distance = loc.distance_to(target)
-        proportion = self.move_speed/distance
-        try:
-            new_pos = loc.lerp(target, proportion)
-            self.x = new_pos.x
-            self.y = new_pos.y
-        except ValueError:
-            return
+        if self.reached_target == False:
+            if self.mt_x == self.x and self.mt_y == self.y:
+                self.reached_target = True
+            loc = pygame.math.Vector2(self.x, self.y)
+            target = pygame.math.Vector2(self.mt_x, self.mt_y)
+            distance = loc.distance_to(target)
+            proportion = self.move_speed/distance
+            try:
+                new_pos = loc.lerp(target, proportion)
+                self.x = new_pos.x
+                self.y = new_pos.y
+            except ValueError:
+                self.reached_target = True   # Ewww. Sorry.
 
 def gen_random_color():
     return  pygame.Color(
