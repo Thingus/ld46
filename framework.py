@@ -5,6 +5,8 @@ from enum import Enum
 import pdb
 
 object_dict = {obj_id:None for obj_id in range(0, 300)}    # I know globals are bad but this is LD, baby.
+volume = 5
+
 
 class PygView(object):
     """
@@ -41,20 +43,16 @@ class PygView(object):
                         pdb.set_trace()
             milliseconds = self.clock.tick(self.fps)
             self.playtime += milliseconds /1000.0
-            self.draw_text("FPS: {:6.3}\nPLAYTIME: {:6.3} SECONDS".format(
+            self.draw_text("FPS: {:6.3}  PLAYTIME: {:6.3} SECONDS".format(
                            self.clock.get_fps(), self.playtime))
             for updateable in object_dict.values():
-                try:
+                if "update" in dir(updateable):
                     updateable.update()
-                except AttributeError:
-                    pass
             pygame.display.flip()
             self.screen.blit(self.surface, (0,0))
             for drawable in object_dict.values():
-                try:
+                if "draw" in dir(drawable):
                     drawable.draw()
-                except AttributeError:
-                    pass
         pygame.quit()
 
     def draw_text(self, text):
@@ -96,12 +94,11 @@ class Door(object):
     """
     def guest_left(self, guest):
         guest.
-    """ 
-        
+    """  
 
 class Mood(Enum):
-    DANCE = 1
-    TALK = 2
+    DANCING = 1
+    TALKING = 2
     LEAVE = 0
 
 class PartyState(Enum):
@@ -126,8 +123,9 @@ class Partygoer(object):
         global object_dict
         object_dict[self.id] = self
         if not mood:
-            mood = Mood(randint(1,2))
+            self.mood = Mood(randint(1,2))
         self.state = PartyState.ENTERING
+        self.fun = 25
 
     def generate_sprite(self):
         skin_color = gen_random_color()
@@ -171,38 +169,43 @@ class Partygoer(object):
         """
         Check for state transitions
         """
-        if self.state = PartyState.ENTERING:
-            if mood == Mood.DANCING:
-                self.state = PartyState.MOVING_TO_DANCE
-            elif mood == Mood.TALKNG:
-                self.state = PartyState.MOVING_TO_TALK
-        elif self.state = PartyState.MOVING_TO_DANCE:
+        if self.state == PartyState.ENTERING:
+            if self.mood == Mood.DANCING:
+                self.move_to_dance()
+            elif self.mood == Mood.TALKING:
+                self.move_to_talk()
+        elif self.state == PartyState.MOVING_TO_DANCE:
             if self.reached_target:
                 self.state = PartyState.DANCING
-        elif self.state = PartyState.MOVING_TO_TALK:
+        elif self.state == PartyState.MOVING_TO_TALK:
             if self.reached_target:
                 self.state = PartyState.TALKING
-        elif self.state = PartyState.DANCING:
-            if mood = Mood.TALKING:
-                self.state = PartyState.MOVING_TO_TALK
-            elif mood = Mood.LEAVING
+        elif self.state == PartyState.DANCING:
+            if self.mood == Mood.TALKING:
+                self.move_to_talk()
+            elif mood == Mood.LEAVING:
                 self.state = PartyState.MOVING_TO_LEAVE
-        elif self.state = PartyState.TALKING:
-            if mood = Mood.DANCING:
+        elif self.state == PartyState.TALKING:
+            if mood == Mood.DANCING:
                 self.move_to_dance()
-            elif mood = Mood.LEAVING:
+            elif mood == Mood.LEAVING:
                 self.state = PartyState.MOVING_TO_LEAVE
     
     def move_to_dance(self):
         # Pick random spot on dancefloor area
-        set_move_target(
+        self.set_move_target(
             x = randint(10, 300),
             y = randint(50, 440),
             speed =  4)
-        self.state = state.MOVING_TO_DANCE
+        self.state = PartyState.MOVING_TO_DANCE
 
-    def move_to_talk(self)
-    
+    def move_to_talk(self):
+        # Pick random spot in bar area
+        self.set_move_target(
+            x = randint(350, 620),
+            y = randint(50, 440),
+            speed = 2)
+        self.state = PartyState.MOVING_TO_TALK 
 
     def fun_update(self):
         """
@@ -219,7 +222,7 @@ class Partygoer(object):
             else:
                 self.fun += 1
 
-    def mood_update(self)
+    def mood_update(self):
         """
         1 in 5 (?) chance that this partygoer wants to do something else
         """
@@ -241,7 +244,10 @@ class Partygoer(object):
     def update(self):
         """
         Logic for this thing to do on evey clock step
-        """ 
+        """
+        self.fun_update()
+        self.mood_update()
+        self.state_update() 
         self.move_towards_target()
     
     """
