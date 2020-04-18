@@ -131,6 +131,11 @@ class Partygoer(object):
         skin_color = gen_random_color()
         tshirt_color = gen_random_color()
         trouser_color = gen_random_color()
+        # Background
+        pygame.draw.rect(
+            self.surface,
+            pygame.Color(255,255,255),
+            pygame.Rect(0,0, self.width, self.height))
         # Tshirt rect
         pygame.draw.rect(
             self.surface,
@@ -180,6 +185,9 @@ class Partygoer(object):
         elif self.state == PartyState.MOVING_TO_TALK:
             if self.reached_target:
                 self.state = PartyState.TALKING
+        elif self.state == PartyState.MOVING_TO_LEAVE:
+            if self.reached_target:
+                self.destroy()
         elif self.state == PartyState.DANCING:
             if self.mood == Mood.TALKING:
                 self.move_to_talk()
@@ -205,7 +213,14 @@ class Partygoer(object):
             x = randint(350, 620),
             y = randint(50, 440),
             speed = 2)
-        self.state = PartyState.MOVING_TO_TALK 
+        self.state = PartyState.MOVING_TO_TALK
+
+    def move_to_leave(self):
+        # Pick a random spot in the doorway
+        self.set_move_target(
+            x = randint(200, 400),
+            y = randint(450, 480),
+            speed = 2) 
 
     def fun_update(self):
         """
@@ -250,11 +265,9 @@ class Partygoer(object):
         self.state_update() 
         self.move_towards_target()
     
-    """
     def destroy(self):
         global object_dict
-        (me for me in object_dict if me.id == self.id)
-    """    
+        object_dict[self.id] = None
     
     def move_towards_target(self):
         if self.mt_x == self.x and self.mt_y == self.y:
