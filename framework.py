@@ -10,7 +10,7 @@ volume = 5
 
 class PygView(object):
     """
-    From https://raw.githubusercontent.com/horstjens/ThePythonGameBook/master/pygame/002_display_fps_pretty.py
+    Based on https://raw.githubusercontent.com/horstjens/ThePythonGameBook/master/pygame/002_display_fps_pretty.py
     """
     
     def __init__(self, width=640, height=480, fps=30):
@@ -26,12 +26,14 @@ class PygView(object):
         self.font = pygame.font.SysFont("mono", 20, bold=True)
         
         door = Door(self.screen, 320, 480)
+        volume_slider = VolumeSlider(self.screen, 0, 0)
         global object_dict
-        object_dict[door.id] = door
+        object_dict[door.id] = door # Each object should instanstiate itself
 
     def run(self):
         running = True
         global object_dict
+        global volume
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -41,10 +43,16 @@ class PygView(object):
                         running = False
                     if event.key == pygame.K_d:
                         pdb.set_trace()
+                    if event.key == pygame.K_UP:
+                        if volume < 10:
+                            volume += 1
+                    if event.key == pygame.K_DOWN:
+                        if volume > 0:
+                            volume -= 1
             milliseconds = self.clock.tick(self.fps)
             self.playtime += milliseconds /1000.0
-            self.draw_text("FPS: {:6.3}  PLAYTIME: {:6.3} SECONDS".format(
-                           self.clock.get_fps(), self.playtime))
+            #self.draw_text("FPS: {:6.3}  PLAYTIME: {:6.3} SECONDS".format(
+            #               self.clock.get_fps(), self.playtime))
             for updateable in object_dict.values():
                 if "update" in dir(updateable):
                     updateable.update()
@@ -58,7 +66,68 @@ class PygView(object):
     def draw_text(self, text):
         fw, fh = self.font.size(text)
         surface = self.font.render(text, True, (0, 255, 0))
-        self.screen.blit(surface, (0, 0)) 
+        self.screen.blit(surface, (0, 0))
+
+
+class VolumeSlider(object):
+    """
+    The volume slider at the top of the screen
+    """
+
+    def __init__(self, parent_surface, x, y, width=300, height=50):
+        self.parent_surface = parent_surface
+        self.foreground_surface = pygame.Surface((width, height))
+        self.foreground_surface = pygame.Surface((width, height))
+        self.tick_locs = list(range(0, 301, 30))
+        self.id = 0
+        self.x = x
+        self.y = y
+        self.font = pygame.font.SysFont("ubuntu", 10)
+        global object_dict
+        object_dict[self.id] = self
+        self.gen_line_sprite()
+
+        
+    def gen_line_sprite(self):
+        # The slider itself
+        pygame.draw.line(
+            self.foreground_surface,
+            pygame.Color(255, 0, 0),
+            (0, 15),
+            (300, 15),
+            5
+        )
+        # The volume ticks
+        for offset in self.tick_locs:
+            pygame.draw.line(
+                self.foreground_surface,
+                pygame.Color(255, 255, 255),
+                (offset, 0),
+                (offset, 5),
+                2
+            )
+            text = self.font.render(str(offset), False, pygame.Color(255, 255, 255))
+            self.foreground_surface.blit(text, (offset, 10))
+        self.foreground_surface.convert()
+
+    def draw_slider(self):
+        slider_rect = pygame.Rect(
+            self.tick_locs[volume] - 3,
+            10,
+            5,
+            10
+        )
+        pygame.draw.rect(
+            self.foreground_surface,
+            pygame.Color(255,255,255),
+            slider_rect
+        )
+        self.foreground_surface.convert()
+
+    def draw(self):
+        self.gen_line_sprite()
+        self.draw_slider()
+        self.parent_surface.blit(self.foreground_surface, (self.x, self.y))
 
 
 class Door(object):
@@ -74,7 +143,7 @@ class Door(object):
         self.max_guests = max_guests
         self.spawn_ticker = 0
         self.spawned_guests = 0
-        self.id = randint(50, 100)
+        self.id = 2   # This stays constant
         
     def new_guest(self):
         Partygoer(self.parent_surface, randint(10, 600), randint(400, 480))
@@ -90,16 +159,13 @@ class Door(object):
         if self.spawn_ticker % self.spawn_rate == 0:
             self.spawn_ticker = 0
             self.new_guest()
-    
-    """
-    def guest_left(self, guest):
-        guest.
-    """  
+
 
 class Mood(Enum):
     DANCING = 1
     TALKING = 2
     LEAVING = 0
+
 
 class PartyState(Enum):
     ENTERING = 0
@@ -108,6 +174,7 @@ class PartyState(Enum):
     DANCING = 3
     TALKING = 4
     MOVING_TO_LEAVE = 5
+
 
 class Partygoer(object):
     
@@ -120,14 +187,16 @@ class Partygoer(object):
         self.y = y
         self.generate_sprite()
         self.id = randint(100, 300)
-        global object_dict
-        object_dict[self.id] = self
         if not mood:
             self.mood = Mood(randint(1,2))
         self.state = PartyState.ENTERING
         self.fun = 25
         self.ticker = 0
         self.reached_target = True
+        self.mt_x = x
+        self.mt_y = y
+        global object_dict
+        object_dict[self.id] = self
 
     def generate_sprite(self):
         skin_color = gen_random_color()
@@ -291,6 +360,7 @@ class Partygoer(object):
                 self.y = new_pos.y
             except ValueError:
                 self.reached_target = True   # Ewww. Sorry.
+
 
 def gen_random_color():
     return  pygame.Color(
